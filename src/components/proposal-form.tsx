@@ -48,8 +48,20 @@ export function ProposalForm({ onProposalGenerated }: ProposalFormProps) {
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || "Failed to generate proposal");
+                // Try to parse JSON error, fallback to text, then status text
+                const text = await response.text();
+                let errorMessage = response.statusText || "Failed to generate proposal";
+
+                try {
+                    const json = JSON.parse(text);
+                    if (json.error) errorMessage = json.error;
+                } catch {
+                    // If parsing fails, use the raw text if it's short, otherwise fallback
+                    if (text.length < 100) errorMessage = text;
+                    if (response.status === 504) errorMessage = "Timeout: AI generation took too long.";
+                }
+
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();

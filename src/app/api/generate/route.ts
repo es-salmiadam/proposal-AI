@@ -5,6 +5,9 @@ import { prisma } from "@/lib/db";
 // @ts-ignore
 const pdfParse = require("pdf-parse");
 
+export const maxDuration = 60; // Allow up to 60 seconds for AI generation
+
+
 export async function POST(req: Request) {
     try {
         const { userId } = await auth();
