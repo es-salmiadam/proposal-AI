@@ -50,16 +50,22 @@ export function ProposalForm({ onProposalGenerated }: ProposalFormProps) {
             if (!response.ok) {
                 // Try to parse JSON error, fallback to text, then status text
                 const text = await response.text();
-                let errorMessage = response.statusText || "Failed to generate proposal";
+                console.log("API Error Response:", response.status, response.statusText, text);
 
-                try {
-                    const json = JSON.parse(text);
-                    if (json.error) errorMessage = json.error;
-                } catch {
-                    // If parsing fails, use the raw text if it's short, otherwise fallback
-                    if (text.length < 100) errorMessage = text;
-                    if (response.status === 504) errorMessage = "Timeout: AI generation took too long.";
+                let errorMessage = `Error ${response.status}: ${response.statusText || "Unknown error"}`;
+
+                if (text && text.trim()) {
+                    try {
+                        const json = JSON.parse(text);
+                        if (json.error) errorMessage = json.error;
+                    } catch {
+                        // If parsing fails, use the raw text if it's short
+                        if (text.length < 200) errorMessage = text;
+                    }
                 }
+
+                if (response.status === 504) errorMessage = "Timeout: AI generation took too long. Try again.";
+                if (response.status === 401) errorMessage = "Session expired. Please refresh and sign in again.";
 
                 throw new Error(errorMessage);
             }
@@ -68,8 +74,8 @@ export function ProposalForm({ onProposalGenerated }: ProposalFormProps) {
             onProposalGenerated(result.proposal);
             toast.success("Proposal generated successfully!");
         } catch (error) {
-            console.error(error);
-            const message = error instanceof Error ? error.message : "Something went wrong";
+            console.error("Generation error:", error);
+            const message = error instanceof Error && error.message ? error.message : "Something went wrong. Check console for details.";
             toast.error(message);
         } finally {
             setIsLoading(false);
